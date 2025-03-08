@@ -4,7 +4,8 @@
 
 The **AI-Powered OS Monitor** is a real-time system monitoring dashboard built using Python, Dash, and Plotly. It provides live updates on CPU, network, and disk usage, along with AI-powered forecasting for CPU usage using the ARIMA time-series model.
 
----
+![image](https://github.com/user-attachments/assets/4ff63583-c977-4d1f-8d0b-997f366ac27e)
+
 
 ## Features
 
