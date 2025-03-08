@@ -1,0 +1,79 @@
+/* Custom heading style */
+.custom-heading {
+    text-align: center;
+    color: #3083d6; /* Dark blue color */
+    font-family: 'Arial', sans-serif;
+    font-size: 36px;
+    margin-bottom: 40px;
+    margin-top: 40px;
+    padding: 10px;
+    background-color: #ecf0f1; /* Light gray background */
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+/* Graph row styling */
+.graph-row {
+    margin-bottom: 20px;
+}
+
+/* Dashboard container styling */
+.dashboard-container {
+    padding: 20px;
+    background-color: #f8f9fa; /* Light background for the entire dashboard */
+    min-height: 100vh; /* Ensure the dashboard takes full height */
+}
+
+/* Forecast section styling */
+.forecast-section {
+    margin-top: 40px;
+    padding: 20px;
+    background-color: #ffffff; /* White background for contrast */
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.forecast-section h4 {
+    text-align: center;
+    color: #2c3e50; /* Dark gray color */
+    font-family: 'Arial', sans-serif;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+/* Graph card styling */
+.graph-card {
+    background-color: #ffffff; /* White background for graph cards */
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+/* Customize Plotly graph layout */
+.dash-graph {
+    background-color: #ffffff; /* White background for graphs */
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+/* Customize Plotly graph title */
+.gtitle {
+    font-family: 'Arial', sans-serif;
+    font-size: 18px;
+    color: #2c3e50; /* Dark gray color */
+}
+
+/* Customize Plotly axis titles */
+.xtitle, .ytitle {
+    font-family: 'Arial', sans-serif;
+    font-size: 14px;
+    color: #34495e; /* Slightly lighter gray color */
+}
+
+/* Customize Plotly hover labels */
+.hovertext {
+    font-family: 'Arial', sans-serif;
+    font-size: 12px;
+    color: #2c3e50; /* Dark gray color */
+}
