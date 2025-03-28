@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered OS Monitor</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdn.plot.ly/plotly-2.9.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #1E88E5; /* Blue for buttons and accents */
+            --secondary-color: #1565C0; /* Darker blue for hover/active */
+            --cpu-color: #1E88E5; /* Blue for CPU */
+            --memory-color: #42A5F5; /* Lighter blue for Memory */
+            --network-color: #90CAF9; /* Pale blue for Network */
+            --disk-color: #BBDEFB; /* Very light blue for Disk */
+            --background: #E3F2FD; /* Very light blue background */
+            --card-bg: #FFFFFF; /* White cards in light mode
+
+*/
+            --text-color: #0D47A1; /* Dark blue text */
+            --alert-color: #EF5350; /*  /* Red for alerts */
+            --success-color: #66BB6A; /* Green for success */
+        }
+
+        body.dark-mode {
+            --background: #0A1428; /* Deep vibrant blue background */
+            --card-bg: #1C2A44; /* Vibrant dark blue for cards */
+            --text-color: #BBDEFB; /* Light blue text */
+            --primary-color: #42A5F5; /* Brighter blue for buttons */
+            --secondary-color: #1976D2; /* Slightly darker vibrant blue */
+            --cpu-color: #42A5F5;
+            --memory-color: #64B5F6;
+            --network-color: #90CAF9;
+            --disk-color: #BBDEFB;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+            position: relative;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-bottom: 100px;
+            min-height: calc(100vh - 60px);
+            box-sizing: border-box;
+        }
+
+        footer {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            text-align: center;
+            padding: 20px 0;
+            /* background: linear-gradient(45deg, var(--primary-color), var(--secondary-color)); */
+            background: white;
+            color: var(--secondary-color);
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            letter-spacing: 1px;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+            border-radius: 5px 5px 0 0;
+            margin-top: 60px;
+            width: 100%;
+            min-height: 60px;
+            font-weight: bold;
+        }
+
+        .custom-heading {
+            text-align: center;
+            margin-bottom: 40px;
+            color: var(--primary-color);
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 700;
+        }
+
+        body.dark-mode .custom-heading {
+            color: #BBDEFB;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            padding: 0 15px;
+        }
+
+        .btn-primary {
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+            background: linear-gradient(45deg, var(--primary-color), #42A5F5);
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover, .btn-primary.active {
+            transform: translateY(-2px);
+            background: linear-gradient(45deg, var(--secondary-color), #1E88E5);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        body.dark-mode .btn-primary:hover, body.dark-mode .btn-primary.active {
+            background: linear-gradient(45deg, #1976D2, #42A5F5);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .graph-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+            padding: 0 15px;
+        }
+
+        .graph-card {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, background-color 0.3s;
+            height: 450px;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .graph-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .graph-wrapper {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #BBDEFB;
+            border-radius: 8px;
+            box-sizing: border-box;
+            flex-grow: 1;
+        }
+
+        body.dark-mode .graph-wrapper {
+            border-color: #42A5F5;
+        }
+
+        .plotly-graph-div {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .forecast-section, .alert-section, .speedtest-section, .metrics-section, .process-section, .temperature-section, .battery-section {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            margin-left: 15px;
+            margin-right: 15px;
+            transition: background-color 0.3s;
+        }
+
+        .metrics-section h4, .process-section h4, .temperature-section h4, .battery-section h4, .speedtest-section h4, .alert-section h4 {
+            margin-bottom: 20px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        body.dark-mode .metrics-section h4,
+        body.dark-mode .process-section h4,
+        body.dark-mode .temperature-section h4,
+        body.dark-mode .battery-section h4,
+        body.dark-mode .speedtest-section h4,
+        body.dark-mode .alert-section h4 {
+            color: #BBDEFB;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 10px;
+        }
+
+        .metric-item {
+            padding: 20px;
+            border: 1px solid #BBDEFB;
+            border-radius: 8px;
+            text-align: center;
+            background-color: #E3F2FD;
+            transition: background-color 0.3s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 120px;
+        }
+
+        body.dark-mode .metric-item {
+            background-color: #1C2A44;
+            border-color: #42A5F5;
+        }
+
+        .metric-item h5 {
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .metric-item p {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        body.dark-mode .metric-item p {
+            color: #BBDEFB;
+        }
+
+        .process-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .process-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+
+        .process-item {
+            padding: 12px;
+            margin: 8px 0;
+            background-color: #E3F2FD;
+            border: 1px solid #BBDEFB;
+            border-radius: 8px;
+            color: #0D47A1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+
+        body.dark-mode .process-item {
+            background-color: #1C2A44;
+            border-color: #42A5F5;
+            color: #BBDEFB;
+        }
+
+        .temperature-display, .battery-display {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 15px;
+            border: 1px solid #BBDEFB;
+            border-radius: 8px;
+            background-color: #E3F2FD;
+            color: #0D47A1;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark-mode .temperature-display,
+        body.dark-mode .battery-display {
+            background-color: #1C2A44;
+            border-color: #42A5F5;
+            color: #BBDEFB;
+        }
+
+        .battery-display.low {
+            background-color: #FFEBEE;
+            border-color: #EF9A9A;
+            color: #D32F2F;
+        }
+
+        body.dark-mode .battery-display.low {
+            background-color: #3E2723;
+            border-color: #EF9A9A;
+            color: #EF9A9A;
+        }
+
+        .forecast-controls {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .forecast-graph {
+            height: 400px;
+            width: 100%;
+            border: 2px solid #BBDEFB;
+            border-radius: 8px;
+        }
+
+        body.dark-mode .forecast-graph {
+            border-color: #42A5F5;
+        }
+
+        .alert-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+
+        .alert-item {
+            padding: 12px;
+            margin: 8px 0;
+            background-color: #FFEBEE;
+            border: 1px solid #EF9A9A;
+            border-radius: 8px;
+            color: #D32F2F;
+        }
+
+        body.dark-mode .alert-item {
+            background-color: #3E2723;
+            border-color: #EF9A9A;
+            color: #EF9A9A;
+        }
+
+        .no-alerts {
+            padding: 12px;
+            margin: 8px 0;
+            background-color: #E8F5E9;
+            border: 1px solid #A5D6A7;
+            border-radius: 8px;
+            color: #388E3C;
+            text-align: center;
+        }
+
+        body.dark-mode .no-alerts {
+            background-color: #1B5E20;
+            border-color: #A5D6A7;
+            color: #A5D6A7;
+        }
+
+        .speedtest-result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid var(--network-color);
+            border-radius: 8px;
+            background-color: #E3F2FD;
+            font-weight: bold;
+            font-size: 1.1rem;
+            white-space: pre-line;
+            display: none;
+            color: #0D47A1;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .speedtest-result.visible {
+            display: block;
+        }
+
+        body.dark-mode .speedtest-result {
+            background-color: #1C2A44;
+            color: #BBDEFB;
+        }
+
+        .mode-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .mode-toggle button {
+            padding: 8px 16px;
+            font-size: 14px;
+            background: linear-gradient(45deg, var(--primary-color), #42A5F5);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .mode-toggle button:hover {
+            background: linear-gradient(45deg, var(--secondary-color), #1E88E5);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        body.dark-mode .mode-toggle button:hover {
+            background: linear-gradient(45deg, #1976D2, #42A5F5);
+        }
+
+        @media (max-width: 768px) {
+            .button-container {
+                gap: 10px;
+            }
+            .btn-primary {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            .graph-card {
+                padding: 15px;
+                height: 350px;
+            }
+            .forecast-graph {
+                height: 300px;
+            }
+            .graph-container {
+                grid-template-columns: 1fr;
+            }
+            .mode-toggle {
+                top: 10px;
+                left: 10px;
+            }
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            .metric-item {
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="mode-toggle">
+            <button id="mode-toggle">Dark Mode</button>
+        </div>
+        <h1 class="custom-heading">AI-Powered OS Monitor</h1>
+        
+        <div class="button-container">
+            <button id="cpu-button" class="btn btn-primary active">CPU Usage</button>
+            <button id="memory-button" class="btn btn-primary">Memory Usage</button>
+            <button id="network-button" class="btn btn-primary">Network Usage</button>
+            <button id="disk-button" class="btn btn-primary">Disk Usage</button>
+            <button id="settings-button" class="btn btn-primary" data-toggle="modal" data-target="#settingsModal">Settings</button>
+            <button id="export-data-button" class="btn btn-primary">Export Data</button>
+        </div>
+
+        <div class="graph-container">
+            <div class="graph-card" id="cpu-graph-card">
+                <div class="graph-wrapper" id="live-cpu-graph"></div>
+            </div>
+            <div class="graph-card" id="memory-graph-card" style="display: none;">
+                <div class="graph-wrapper" id="live-memory-graph"></div>
+            </div>
+            <div class="graph-card" id="network-graph-card" style="display: none;">
+                <div class="graph-wrapper" id="live-network-graph"></div>
+            </div>
+            <div class="graph-card" id="disk-graph-card" style="display: none;">
+                <div class="graph-wrapper" id="live-disk-graph"></div>
+            </div>
+        </div>
+
+        <div class="forecast-section" id="settingsModal" tabindex="-1" role="dialog" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1050; width: 100%; max-width: 500px; background: var(--card-bg); box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: background-color 0.3s;">
+            <div class="forecast-controls">
+                <h4>Settings</h4>
+                <button type="button" class="close" onclick="$('#settingsModal').hide();">×</button>
+            </div>
+            <div style="padding: 20px;">
+                <label>Alert Threshold (%):</label>
+                <input type="number" id="alert-threshold" value="80" min="0" max="100" class="form-control">
+                <label>Update Interval (seconds):</label>
+                <input type="number" id="update-interval" value="2" min="1" max="10" class="form-control">
+                <label>Enable Auto-Scaling:</label>
+                <input type="checkbox" id="auto-scaling" checked class="form-control">
+                <label>Y-Axis Max Value (%):</label>
+                <input type="number" id="y-axis-max" value="100" min="50" max="500" class="form-control" disabled>
+                <label>Enable Alerts:</label>
+                <input type="checkbox" id="enable-alerts" checked class="form-control">
+                <label>Enable Alert Sound:</label>
+                <input type="checkbox" id="enable-alert-sound" checked class="form-control">
+            </div>
+            <div style="padding: 0 20px 20px; text-align: right;">
+                <button type="button" class="btn btn-primary" id="save-settings">Save</button>
+            </div>
+        </div>
+
+        <!-- Current Metrics Section -->
+        <div class="metrics-section">
+            <h4>Current System Metrics</h4>
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <h5>CPU Usage</h5>
+                    <p id="current-cpu">0%</p>
+                </div>
+                <div class="metric-item">
+                    <h5>Memory Usage</h5>
+                    <p id="current-memory">0%</p>
+                </div>
+                <div class="metric-item">
+                    <h5>Disk Usage</h5>
+                    <p id="current-disk">0%</p>
+                </div>
+                <div class="metric-item">
+                    <h5>Network Usage</h5>
+                    <p id="current-network">0 KB/s ↓ / 0 KB/s ↑</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Process List Section -->
+        <div class="process-section">
+            <div class="process-controls">
+                <h4>Top Processes</h4>
+                <div>
+                    <button id="sort-cpu-button" class="btn btn-primary active">Sort by CPU</button>
+                    <button id="sort-memory-button" class="btn btn-primary">Sort by Memory</button>
+                </div>
+            </div>
+            <ul id="process-list" class="process-list"></ul>
+        </div>
+
+        <!-- Temperature Section -->
+        <div class="temperature-section">
+            <h4>CPU Temperature</h4>
+            <div class="temperature-display" id="cpu-temperature">0°C</div>
+        </div>
+
+        <!-- Battery Section -->
+        <div class="battery-section">
+            <h4>Battery Status</h4>
+            <div class="battery-display" id="battery-status">0% (Not Charging)</div>
+        </div>
+
+        <!-- Forecast Section -->
+        <div class="forecast-section">
+            <div class="forecast-controls">
+                <h4>Usage Forecasts</h4>
+                <div>
+                    <button id="cpu-forecast-button" class="btn btn-primary active">CPU Forecast</button>
+                    <button id="memory-forecast-button" class="btn btn-primary">Memory Forecast</button>
+                    <button id="disk-forecast-button" class="btn btn-primary">Disk Forecast</button>
+                </div>
+            </div>
+            <div id="cpu-forecast-graph" class="forecast-graph"></div>
+            <div id="memory-forecast-graph" class="forecast-graph" style="display: none;"></div>
+            <div id="disk-forecast-graph" class="forecast-graph" style="display: none;"></div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="alert-section">
+            <h4>System Alerts</h4>
+            <ul id="alert-list" class="alert-list"></ul>
+        </div>
+
+        <!-- Speed Test Section -->
+        <div class="speedtest-section">
+            <h4>Network Speed Test</h4>
+            <button id="speedtest-button" class="btn btn-primary">Run Speed Test</button>
+            <p id="network-speed-result" class="speedtest-result"></p>
+        </div>
+        
+        <footer>@OS2025</footer>
+    </div>
+
+    <script>
+        const storedData = {
+            cpu: { x: [], y: [] },
+            memory: { x: [], y: [] },
+            network: { x: [], y: [] },
+            disk: { x: [], y: [] }
+        };
+
+        const colors = {
+            cpu: '#1E88E5',     // Dark blue
+            memory: '#42A5F5',  // Lighter blue
+            network: '#1E88E5', // Dark blue (updated)
+            disk: '#1E88E5'     // Dark blue (updated)
+        };
+
+        const baseLayout = {
+            autosize: true,
+            margin: { l: 80, r: 50, t: 80, b: 100 },
+            plot_bgcolor: '#E3F2FD',
+            paper_bgcolor: '#E3F2FD',
+            font: { size: 12, color: '#0D47A1' },
+            title: { font: { size: 18 } },
+            xaxis: { 
+                title: { 
+                    text: 'Time', 
+                    standoff: 20, 
+                    font: { color: '#666', size: 16 } 
+                }, 
+                tickfont: { size: 12 }, 
+                tickangle: 45, 
+                showgrid: true, 
+                gridcolor: '#BBDEFB' 
+            },
+            yaxis: { 
+                title: { 
+                    text: '', 
+                    standoff: 20, 
+                    font: { size: 16 } 
+                }, 
+                tickfont: { size: 12 }, 
+                range: [0, 100], 
+                showgrid: true, 
+                gridcolor: '#BBDEFB', 
+                ticksuffix: '%' 
+            }
+        };
+
+        function initializeGraph(graphId, title, yAxisTitle, color, isPercentage = true) {
+            const layout = {
+                ...baseLayout,
+                title: { text: title },
+                yaxis: { 
+                    ...baseLayout.yaxis, 
+                    title: { 
+                        text: yAxisTitle, 
+                        font: { color, size: 16 } 
+                    }, 
+                    range: isPercentage ? [0, parseInt(document.getElementById('y-axis-max')?.value) || 100] : [0, 100] 
+                }
+            };
+            
+            const data = [{
+                x: [],
+                y: [],
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: { color: color, width: 2 },
+                marker: { size: 6 }
+            }];
+
+            Plotly.newPlot(graphId, data, layout, { 
+                responsive: true, 
+                displayModeBar: false 
+            });
+        }
+
+        function updateGraph(graphId, data, title, yAxisTitle, color, isPercentage = true) {
+            const trace = {
+                x: data.x,
+                y: data.y,
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: { color: color, width: 2 },
+                marker: { size: 6 }
+            };
+
+            const layout = {
+                ...baseLayout,
+                title: { text: title },
+                yaxis: { 
+                    ...baseLayout.yaxis, 
+                    title: { 
+                        text: yAxisTitle, 
+                        font: { color, size: 16 } 
+                    }, 
+                    range: document.getElementById('auto-scaling')?.checked ? undefined : [0, parseInt(document.getElementById('y-axis-max')?.value) || 100] 
+                }
+            };
+
+            Plotly.update(graphId, { x: [data.x], y: [data.y] }, layout);
+        }
+
+        function generateForecastData(data, key) {
+            const forecast = { x: [], y: [] };
+            const lastTime = new Date();
+            let lastValue = data.y.length ? data.y[data.y.length - 1] : 50;
+
+            for (let i = 0; i < 10; i++) {
+                lastTime.setSeconds(lastTime.getSeconds() + 10);
+                lastValue = Math.min(100, Math.max(0, lastValue + (Math.random() - 0.5) * 10));
+                forecast.x.push(lastTime.toLocaleTimeString());
+                forecast.y.push(lastValue);
+            }
+            return forecast;
+        }
+
+        let processes = [];
+
+        async function fetchProcessData() {
+            const performance = window.performance || {};
+            const memoryInfo = performance.memory || { usedJSHeapSize: 0, totalJSHeapSize: 0 };
+            const memoryUsage = memoryInfo.usedJSHeapSize / memoryInfo.totalJSHeapSize * 100 || 0;
+
+            processes = [
+                { name: "Browser Main", cpu: Math.random() * 20 + 10, memory: memoryUsage || Math.random() * 30 + 20 },
+                { name: "Tab 1", cpu: Math.random() * 15 + 5, memory: Math.random() * 20 + 10 },
+                { name: "Tab 2", cpu: Math.random() * 10 + 5, memory: Math.random() * 15 + 5 },
+                { name: "Extension 1", cpu: Math.random() * 5 + 2, memory: Math.random() * 10 + 5 },
+                { name: "Extension 2", cpu: Math.random() * 5 + 1, memory: Math.random() * 10 + 3 }
+            ];
+        }
+
+        function updateProcessList(sortBy = 'cpu') {
+            const sortedProcesses = [...processes].sort((a, b) => b[sortBy] - a[sortBy]);
+            const processList = document.getElementById('process-list');
+            if (processList) {
+                processList.innerHTML = sortedProcesses
+                    .slice(0, 5)
+                    .map(proc => `
+                        <li class="process-item">
+                            ${proc.name} - CPU: ${proc.cpu.toFixed(1)}% | Memory: ${proc.memory.toFixed(1)}%
+                        </li>
+                    `)
+                    .join('');
+            }
+        }
+
+        let cpuTemperature = 45;
+        let batteryLevel = 24;
+        let isCharging = false;
+
+        async function initializeBattery() {
+            if (navigator.getBattery) {
+                const battery = await navigator.getBattery();
+                batteryLevel = battery.level * 100;
+                isCharging = battery.charging;
+                battery.addEventListener('levelchange', () => {
+                    batteryLevel = battery.level * 100;
+                    updateBatteryDisplay();
+                });
+                battery.addEventListener('chargingchange', () => {
+                    isCharging = battery.charging;
+                    updateBatteryDisplay();
+                });
+            }
+            updateBatteryDisplay();
+        }
+
+        function updateBatteryDisplay() {
+            const batteryElement = document.getElementById('battery-status');
+            batteryElement.textContent = `${batteryLevel.toFixed(0)}% (${isCharging ? 'Charging' : 'Not Charging'})`;
+            batteryElement.classList.toggle('low', batteryLevel < 20);
+        }
+
+        function updateTemperatureAndBattery() {
+            cpuTemperature = Math.min(100, Math.max(30, cpuTemperature + (Math.random() - 0.5) * 5));
+            document.getElementById('cpu-temperature').textContent = `${cpuTemperature.toFixed(1)}°C`;
+
+            if (!navigator.getBattery) {
+                batteryLevel = Math.min(100, Math.max(0, batteryLevel + (isCharging ? 0.5 : -0.3)));
+                isCharging = batteryLevel < 20 ? true : batteryLevel > 80 ? false : isCharging;
+            }
+            updateBatteryDisplay();
+        }
+
+        function exportDataToCSV() {
+            const headers = ['Time', 'CPU (%)', 'Memory (%)', 'Network (MB)', 'Disk (%)'];
+            const rows = storedData.cpu.x.map((time, i) => [
+                time,
+                storedData.cpu.y[i],
+                storedData.memory.y[i],
+                storedData.network.y[i],
+                storedData.disk.y[i]
+            ]);
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(row => row.join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'system_metrics.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function playAlertSound() {
+            const audio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3');
+            audio.play().catch(err => console.log('Audio playback failed:', err));
+        }
+
+        let activeForecastType = 'cpu';
+
+        function updateAllGraphs() {
+            const timeStamp = new Date().toLocaleTimeString();
+            const newData = {
+                cpu: Math.random() * 100,
+                memory: Math.random() * 100,
+                disk: Math.random() * 100,
+                network: Math.random() * 100
+            };
+
+            storedData.cpu.x.push(timeStamp);
+            storedData.cpu.y.push(newData.cpu);
+            storedData.memory.x.push(timeStamp);
+            storedData.memory.y.push(newData.memory);
+            storedData.network.x.push(timeStamp);
+            storedData.network.y.push(newData.network);
+            storedData.disk.x.push(timeStamp);
+            storedData.disk.y.push(newData.disk);
+
+            Object.keys(storedData).forEach(key => {
+                if (storedData[key].x.length > 50) {
+                    storedData[key].x.shift();
+                    storedData[key].y.shift();
+                }
+            });
+
+            updateGraph('live-cpu-graph', storedData.cpu, 'CPU Usage Over Time', 'CPU Usage (%)', colors.cpu);
+            updateGraph('live-memory-graph', storedData.memory, 'Memory Usage Over Time', 'Memory Usage (%)', colors.memory);
+            updateGraph('live-network-graph', storedData.network, 'Network Usage Over Time', 'Network Usage (%)', colors.network, true);
+            updateGraph('live-disk-graph', storedData.disk, 'Disk Usage Over Time', 'Disk Usage (%)', colors.disk);
+
+            document.getElementById('current-cpu').textContent = `${newData.cpu.toFixed(1)}%`;
+            document.getElementById('current-memory').textContent = `${newData.memory.toFixed(1)}%`;
+            document.getElementById('current-disk').textContent = `${newData.disk.toFixed(1)}%`;
+            document.getElementById('current-network').textContent = `${(newData.network * 10).toFixed(0)} KB/s ↓ / ${(newData.network * 5).toFixed(0)} KB/s ↑`;
+
+            fetchProcessData().then(() => {
+                updateProcessList(document.getElementById('sort-cpu-button').classList.contains('active') ? 'cpu' : 'memory');
+            });
+            updateTemperatureAndBattery();
+
+            showForecast(activeForecastType);
+
+            const alerts = [];
+            const threshold = parseInt(document.getElementById('alert-threshold')?.value) || 80;
+            if (newData.cpu > threshold && document.getElementById('enable-alerts')?.checked) {
+                alerts.push(`High CPU Usage: ${newData.cpu.toFixed(2)}%`);
+                if (document.getElementById('enable-alert-sound')?.checked) playAlertSound();
+            }
+            if (newData.memory > threshold && document.getElementById('enable-alerts')?.checked) {
+                alerts.push(`High Memory Usage: ${newData.memory.toFixed(2)}%`);
+                if (document.getElementById('enable-alert-sound')?.checked) playAlertSound();
+            }
+            if (newData.disk > threshold && document.getElementById('enable-alerts')?.checked) {
+                alerts.push(`High Disk Usage: ${newData.disk.toFixed(2)}%`);
+                if (document.getElementById('enable-alert-sound')?.checked) playAlertSound();
+            }
+            if (cpuTemperature > 80) {
+                alerts.push(`High CPU Temperature: ${cpuTemperature.toFixed(1)}°C`);
+                if (document.getElementById('enable-alert-sound')?.checked) playAlertSound();
+            }
+            if (batteryLevel < 20 && !isCharging) {
+                alerts.push(`Low Battery: ${batteryLevel.toFixed(0)}%`);
+                if (document.getElementById('enable-alert-sound')?.checked) playAlertSound();
+            }
+
+            const alertList = document.getElementById('alert-list');
+            if (alerts.length === 0) {
+                alertList.innerHTML = '<li class="no-alerts">No alerts at this time</li>';
+            } else {
+                alertList.innerHTML = alerts
+                    .map(alert => `<li class="alert-item">${alert}</li>`)
+                    .join('');
+            }
+        }
+
+        async function runSpeedTest() {
+            const resultElement = document.getElementById('network-speed-result');
+            resultElement.textContent = 'Running speed test...';
+            resultElement.classList.add('visible');
+            resultElement.classList.remove('error');
+
+            try {
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                const downloadSpeed = (Math.random() * 100).toFixed(2);
+                const uploadSpeed = (Math.random() * 50).toFixed(2);
+                resultElement.textContent = `Download: ${downloadSpeed} Mbps\nUpload: ${uploadSpeed} Mbps`;
+                resultElement.style.backgroundColor = document.body.classList.contains('dark-mode') ? '#1C2A44' : '#E3F2FD';
+                resultElement.style.color = document.body.classList.contains('dark-mode') ? '#BBDEFB' : '#0D47A1';
+            } catch (error) {
+                resultElement.textContent = 'Failed to run speed test.';
+                resultElement.classList.add('error');
+                resultElement.style.backgroundColor = document.body.classList.contains('dark-mode') ? '#1C2A44' : '#E3F2FD';
+                resultElement.style.color = document.body.classList.contains('dark-mode') ? '#BBDEFB' : '#0D47A1';
+            }
+        }
+
+        function showForecast(type) {
+            activeForecastType = type;
+            const forecastData = generateForecastData(storedData[type], type);
+            const forecastGraph = document.getElementById(`${type}-forecast-graph`);
+            
+            ['cpu', 'memory', 'disk'].forEach(t => {
+                document.getElementById(`${t}-forecast-graph`).style.display = t === type ? 'block' : 'none';
+                document.getElementById(`${t}-forecast-button`).classList.toggle('active', t === type);
+            });
+
+            const trace = {
+                x: forecastData.x,
+                y: forecastData.y,
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: { color: colors[type], width: 2, dash: 'dash' },
+                marker: { size: 6 }
+            };
+
+            const layout = {
+                ...baseLayout,
+                title: { text: `${type.toUpperCase()} Usage Forecast (Next 10 Minutes)` },
+                yaxis: { 
+                    ...baseLayout.yaxis, 
+                    title: { 
+                        text: `${type.toUpperCase()} Usage (%)`, 
+                        font: { color: colors[type], size: 16 } 
+                    }, 
+                    range: document.getElementById('auto-scaling')?.checked ? undefined : [0, parseInt(document.getElementById('y-axis-max')?.value) || 100] 
+                }
+            };
+
+            Plotly.update(`${type}-forecast-graph`, { x: [forecastData.x], y: [forecastData.y] }, layout);
+        }
+
+        initializeGraph('live-cpu-graph', 'CPU Usage Over Time', 'CPU Usage (%)', colors.cpu);
+        initializeGraph('live-memory-graph', 'Memory Usage Over Time', 'Memory Usage (%)', colors.memory);
+        initializeGraph('live-network-graph', 'Network Usage Over Time', 'Network Usage (%)', colors.network, true);
+        initializeGraph('live-disk-graph', 'Disk Usage Over Time', 'Disk Usage (%)', colors.disk);
+        initializeGraph('cpu-forecast-graph', 'CPU Usage Forecast (Next 10 Minutes)', 'CPU Usage (%)', colors.cpu);
+        initializeGraph('memory-forecast-graph', 'Memory Usage Forecast (Next 10 Minutes)', 'Memory Usage (%)', colors.memory);
+        initializeGraph('disk-forecast-graph', 'Disk Usage Forecast (Next 10 Minutes)', 'Disk Usage (%)', colors.disk);
+
+        const buttons = ['cpu', 'memory', 'network', 'disk'];
+        buttons.forEach(type => {
+            const button = document.getElementById(`${type}-button`);
+            button.addEventListener('click', () => {
+                buttons.forEach(t => {
+                    const card = document.getElementById(`${t}-graph-card`);
+                    const btn = document.getElementById(`${t}-button`);
+                    card.style.display = t === type ? 'block' : 'none';
+                    btn.classList.toggle('active', t === type);
+                });
+            });
+        });
+
+        ['cpu', 'memory', 'disk'].forEach(type => {
+            document.getElementById(`${type}-forecast-button`).addEventListener('click', () => showForecast(type));
+        });
+
+        document.getElementById('sort-cpu-button').addEventListener('click', () => {
+            document.getElementById('sort-cpu-button').classList.add('active');
+            document.getElementById('sort-memory-button').classList.remove('active');
+            updateProcessList('cpu');
+        });
+
+        document.getElementById('sort-memory-button').addEventListener('click', () => {
+            document.getElementById('sort-memory-button').classList.add('active');
+            document.getElementById('sort-cpu-button').classList.remove('active');
+            updateProcessList('memory');
+        });
+
+        document.getElementById('speedtest-button').addEventListener('click', runSpeedTest);
+        document.getElementById('export-data-button').addEventListener('click', exportDataToCSV);
+
+        let lastUpdate = 0;
+        function efficientUpdate(timestamp) {
+            const interval = (parseInt(document.getElementById('update-interval')?.value) || 2) * 1000;
+            if (timestamp - lastUpdate >= interval) {
+                updateAllGraphs();
+                lastUpdate = timestamp;
+            }
+            requestAnimationFrame(efficientUpdate);
+        }
+
+        requestAnimationFrame(efficientUpdate);
+        updateAllGraphs();
+        initializeBattery();
+
+        document.getElementById('mode-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            document.getElementById('mode-toggle').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+            const bgColor = isDark ? '#1C2A44' : '#E3F2FD';
+            const textColor = isDark ? '#BBDEFB' : '#0D47A1';
+            const gridColor = isDark ? '#42A5F5' : '#BBDEFB';
+            Plotly.relayout('live-cpu-graph', { 
+                plot_bgcolor: bgColor, 
+                paper_bgcolor: bgColor, 
+                font: { color: textColor }, 
+                xaxis: { gridcolor: gridColor }, 
+                yaxis: { gridcolor: gridColor } 
+            });
+            Plotly.relayout('live-memory-graph', { 
+                plot_bgcolor: bgColor, 
+                paper_bgcolor: bgColor, 
+                font: { color: textColor }, 
+                xaxis: { gridcolor: gridColor }, 
+                yaxis: { gridcolor: gridColor } 
+            });
+            Plotly.relayout('live-network-graph', { 
+                plot_bgcolor: bgColor, 
+                paper_bgcolor: bgColor, 
+                font: { color: textColor }, 
+                xaxis: { gridcolor: gridColor }, 
+                yaxis: { gridcolor: gridColor } 
+            });
+            Plotly.relayout('live-disk-graph', { 
+                plot_bgcolor: bgColor, 
+                paper_bgcolor: bgColor, 
+                font: { color: textColor }, 
+                xaxis: { gridcolor: gridColor }, 
+                yaxis: { gridcolor: gridColor } 
+            });
+            Plotly.relayout('cpu-forecast-graph', { 
+                plot_bgcolor: bgColor, 
+                paper_bgcolor: bgColor, 
+                font: { color: textColor }, 
+                xaxis: { gridcolor: gridColor }, 
+                yaxis: { gridcolor: gridColor } 
+            });
+            Plotly.relayout('memory-forecast-graph', { 
+                plot_bgcolor: bgColor, 
+                paper_bgcolor: bgColor, 
+                font: { color: textColor }, 
+                xaxis: { gridcolor: gridColor }, 
+                yaxis: { gridcolor: gridColor } 
+            });
+            Plotly.relayout('disk-forecast-graph', { 
+                plot_bgcolor: bgColor, 
+                paper_bgcolor: bgColor, 
+                font: { color: textColor }, 
+                xaxis: { gridcolor: gridColor }, 
+                yaxis: { gridcolor: gridColor } 
+            });
+        });
+
+        document.getElementById('settings-button').addEventListener('click', () => {
+            $('#settingsModal').show();
+        });
+        document.getElementById('save-settings').addEventListener('click', () => {
+            $('#settingsModal').hide();
+            initializeGraph('live-cpu-graph', 'CPU Usage Over Time', 'CPU Usage (%)', colors.cpu);
+            initializeGraph('live-memory-graph', 'Memory Usage Over Time', 'Memory Usage (%)', colors.memory);
+            initializeGraph('live-network-graph', 'Network Usage Over Time', 'Network Usage (%)', colors.network, true);
+            initializeGraph('live-disk-graph', 'Disk Usage Over Time', 'Disk Usage (%)', colors.disk);
+        });
+        document.getElementById('auto-scaling').addEventListener('change', () => {
+            document.getElementById('y-axis-max').disabled = document.getElementById('auto-scaling').checked;
+        });
+
+        fetchProcessData().then(() => {
+            updateProcessList('cpu');
+        });
+        showForecast('cpu');
+    </script>
+</body>
+</html>
